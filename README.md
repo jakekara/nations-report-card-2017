@@ -7,4 +7,8 @@ My main goal in doing this was shoe-horning the data into a visualization
 tool I had already built in JS, but the combined spreadsheets make the data
 more accessible programatically.
 
-Here's the story we did on [CTMirror.org](https://ctmirror.org/2018/04/10/cts-performance-nations-report-card-doesnt-budge/).
+Here's the story we did on
+[CTMirror.org](https://ctmirror.org/2018/04/10/cts-performance-nations-report-card-doesnt-budge/).
+
+The viz folders contain the code for the hastily-hacked-together
+visualizations, so the code is deadline-quality.
