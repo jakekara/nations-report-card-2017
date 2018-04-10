@@ -14,6 +14,10 @@ var get_group = function(){
     return selected(d3.select("#group_picker")).attr("data-fname");
 }
 
+var get_group2 = function(){
+    return selected(d3.select("#group2_picker")).attr("data-fname");
+}
+
 var get_subj = function(){
     return selected(d3.select("#subj_picker")).attr("data-fname");
 }
@@ -37,8 +41,9 @@ var get_fname = function(){
 var get_keys = function()
 {
     var sel = selected(d3.select("#group_picker"))
+    var sel2 = selected(d3.select("#group2_picker"))    
 
-    return [sel.attr("data-key1"),sel.attr("data-key2")]
+    return [sel.attr("data-key1"),sel2.attr("data-key1")]
 }
 
 var update = function(){
@@ -98,21 +103,20 @@ var go = function(d, keys){
 	    .replace("hispanic","Hispanic");
     }
 
-
-
+    console.log("keys", keys);
     
     var gaps = new gapchart()
 	.container(d3.select("#container"))
     // .val_keys(["ell","not ell"])
-	.val_keys( keys )
+	.val_keys(keys)
 	.label_key("state")
 	.display_label_key(function(d){ return d["ap_abbr"]; })
 	.default_val("Connecticut")
 	// .radius(12)
 	.data(d)
 	.unit("% proficient")
-	.gap_unit("")
-	.title(fmt_group("Average test scores by student subgroup"))
+	.gap_unit(" points")
+	.title(fmt_group("How Connecticut's gaps compare to other states"))
 	// .title(fmt_group("Connecticut students trail behind Massachusetts (FRPL " + keys[0] + ")"))    
 	.radius_function(function(d){
 	    return 10;
@@ -123,7 +127,7 @@ var go = function(d, keys){
 	    if (d[gaps.label_key()] == "Nation")
 		place = "Nationwide, " ;
 	    
-	    return place
+	    var ret =  place
 		+ numeral(get_grade()).format('0o')
 		+ " grade "
 		+ get_group()
@@ -131,15 +135,30 @@ var go = function(d, keys){
 		+ " scored an average of  "
 	    	+ Math.round(d[gaps.val_keys()[0]]) + " points "
 		+ " in "
-		+ get_subj() + "."
+		+ get_subj();
+
+	    if (get_group() == get_group2()){
+		return ret + ". <b>Select a different subgroup to see how it compares with this one</b>.";
+	    }
+	    ret += 
+		", while "
+		+ get_group2()
+		// + fmt_group(gaps.val_keys()[0])	    
+		+ " scored an average of  "
+	    	+ Math.round(d[gaps.val_keys()[1]]) + " points."	    
+
 		// + fmt_group(gaps.val_keys()[1])
 		// + " students"
 		// + " were at or above proficiency in"
 		// + " " + numeral(get_grade()).format('0o')
 		// + "-grade " + get_subj() + "."
-		// + " That's a " + Math.round(gaps.gap(d)) + "-point gap.";
+		+ " That's a " + Math.round(gaps.gap(d)) + "-point gap.";
+
+	    return ret;
 
 	});
+
+    console.log(gaps.val_keys());
 
     gaps.draw_rank();
 
@@ -150,6 +169,11 @@ var go = function(d, keys){
 	}, 250);
     });
 
+
+    // d3.select('#group_picker').property('value', 'Low-income');
+
+
+    
     drawn = true;
 }
 
@@ -178,13 +202,13 @@ var make_gui = function(){
 	"key1":"not ell",
 	"key2":"not ell"
     },{
-	"label":"Special education",
-	"fname":"special education sudents",
+	"label":"Special Education",
+	"fname":"special education students",
 	"key1":"sd",
 	"key2":"sd"
     },{
 	"label":"Not special education",
-	"fname":"non-special educationstudents",
+	"fname":"non-special education students",
 	"key1":"not sd",
 	"key2":"not sd"
     },{
@@ -228,6 +252,8 @@ var make_gui = function(){
     // add group selection
     var group_sel = ctrls.append("select")
 	.attr("id","group_picker")
+    var group2_sel = ctrls.append("select")
+	.attr("id","group2_picker")
     var grade_sel = ctrls.append("select")
 	.attr("id","grade_picker");
     var subj_sel = ctrls.append("select")
@@ -238,11 +264,22 @@ var make_gui = function(){
 	.data(group)
 	.enter()
 	.append("option")
+
 	.attr("data-fname",function(d){ return d["fname"]; })
 	.attr("data-key1",function(d){  return d["key1"]; })
 	.attr("data-key2",function(d){  return d["key2"]; })
 	.text(function(d){ return d["label"];});
 
+    var group2_opts = group2_sel.selectAll("option")
+	.data(group)
+	.enter()
+	.append("option")
+	.attr("value",function(d){ return d["label"]; })    
+	.attr("data-fname",function(d){ return d["fname"]; })
+	.attr("data-key1",function(d){  return d["key1"]; })
+	.attr("data-key2",function(d){  return d["key2"]; })
+	.text(function(d){ return d["label"];});
+    
     var grade_opts = grade_sel.selectAll("option")
 	.data(grade)
 	.enter()
@@ -257,8 +294,10 @@ var make_gui = function(){
     	.attr("data-fname",function(d){ return d["fname"]; })
 	.text(function(d){ return d["label"];});
 
-
     d3.selectAll("select").on("change", update);
+
+    d3.select('#group2_picker').property('value', 'English language learner (ELL)');            
+    d3.select('#group_picker').property('value', 'Non-ELL');        
 
     update();
 

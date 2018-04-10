@@ -29,6 +29,10 @@ var gapchart = function()
 
 gapchart.prototype.explainer_height = accessor ("__explainer_height");
 
+gapchart.prototype.force_scale = accessor ("__force_scale");
+
+gapchart.prototype.axis_disabled = accessor ("__axis_disabled");
+
 gapchart.prototype.title = accessor("__title");
 
 gapchart.prototype.default_val = accessor("__default_val");
@@ -96,7 +100,10 @@ gapchart.prototype.gap_arr = function()
     var that = this;
     
     return this.data().map(function(a){
-	return Number(that.gap.call(that, a));
+	var ret = Number(that.gap.call(that, a));
+	return ret;
+    }).filter(function(a){
+	return Number(a) > 0;
     });
 }
 
@@ -143,6 +150,9 @@ gapchart.prototype.d3scale = function( range ){
 }
 
 gapchart.prototype.rank_scale = function(){
+
+    if (this.__force_scale){ return this.d3scale(this.__force_scale); };
+    console.log("no force scale");
     return this.d3scale( this.gap_range() );
 }
 
@@ -248,6 +258,7 @@ gapchart.prototype.draw_rank = function (){
 	      })
 
     this.__g = this.__svg.append("g");
+    this.__g2 = this.__svg.append("g");
 
     var lkey = this.label_key();
     // console.log("lkey", lkey);
@@ -288,27 +299,35 @@ gapchart.prototype.draw_rank = function (){
 	// this.__margin.left += overhang/2;
 	// return this.draw_rank();
     }
-    
-    this.__axis = this.__g.append("g")
-	.classed("d3axis", true)
-	.append("g")
-	.call(this.rank_axis());
-    
-    // console.log(this.__gaps_g.node().getBBox());
 
-    var trans = "translate(0px, "
-		      + ( this.__gaps_g.node().getBBox().height
-			  + this.__gaps_g.node().getBBox().y
-			  + this.radius())
-	+ "px)";
+    if (!this.axis_disabled()){
+    
+	this.__axis = this.__g.append("g")
+	    .classed("d3axis", true)
+	    .append("g")
+	    .call(this.rank_axis());
+    
+	// console.log(this.__gaps_g.node().getBBox());
 
-    this.__axis.style("transform", trans);
-    // this.__axis.attr("y",
-    // 		     (this.__gaps_g.node().getBBox().height
-    // 		     + this.__gaps_g.node().getBBox().y
-    // 		     + this.radius()) + "px")
+	var trans = "translate(0px, "
+	    + ( this.__gaps_g.node().getBBox().height
+		+ this.__gaps_g.node().getBBox().y
+		+ this.radius())
+	    + "px)";
+
+	this.__axis.style("transform", trans);
+	// this.__axis.attr("y",
+	// 		     (this.__gaps_g.node().getBBox().height
+	// 		     + this.__gaps_g.node().getBBox().y
+	// 		     + this.radius()) + "px")
+    }
 
     this.__rank_dots.on("mouseover", function(d){
+
+	d3.selectAll(".rankdot").attr("data-temphide", true);
+	
+	var st = d3.select(this).attr("data-state");
+	d3.selectAll(".rankdot[data-state='" + st + "'").attr("data-hover",true)
 
 	var tmp_height = that.__explainer.node()
 	    .getBoundingClientRect().height;
@@ -328,6 +347,9 @@ gapchart.prototype.draw_rank = function (){
     // restore the default explainer 
     var restore = function(){
 
+	d3.selectAll(".rankdot").attr("data-temphide", false)
+	d3.selectAll(".rankdot").attr("data-hover",false)
+	
 	var d = that.data().filter(function(a){
 	    return a[that.label_key()] == that.default_val();
 	})[0];

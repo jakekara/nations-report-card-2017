@@ -14,6 +14,11 @@ var get_group = function(){
     return selected(d3.select("#group_picker")).attr("data-fname");
 }
 
+var get_group2 = function(){
+    return selected(d3.select("#group2_picker")).attr("data-fname");
+}
+
+
 var get_subj = function(){
     return selected(d3.select("#subj_picker")).attr("data-fname");
 }
@@ -41,6 +46,14 @@ var get_keys = function()
     return [sel.attr("data-key1"),sel.attr("data-key2")]
 }
 
+var get_keys2 = function()
+{
+    var sel = selected(d3.select("#group2_picker"))
+
+    return [sel.attr("data-key1"),sel.attr("data-key2")]
+}
+
+
 var update = function(){
 
     if ( get_keys() == selected_keys
@@ -59,8 +72,6 @@ var update = function(){
 	    go(d, get_keys());
 	});
     }
-
-    
 }
 
 var go = function(d, keys){
@@ -97,14 +108,11 @@ var go = function(d, keys){
 	    .replace("ell","ELL")
 	    .replace("hispanic","Hispanic");
     }
-
-
-
     
     var gaps = new gapchart()
 	.container(d3.select("#container"))
     // .val_keys(["ell","not ell"])
-	.val_keys( keys )
+	.val_keys( get_keys2() )
 	.label_key("state")
 	.display_label_key(function(d){ return d["ap_abbr"]; })
 	.default_val("Connecticut")
@@ -112,7 +120,7 @@ var go = function(d, keys){
 	.data(d)
 	.unit("% proficient")
 	.gap_unit("")
-	.title(fmt_group("Average test scores by student subgroup"))
+	// .title(fmt_group("Connecticut students trail behind Massachusetts"))
 	// .title(fmt_group("Connecticut students trail behind Massachusetts (FRPL " + keys[0] + ")"))    
 	.radius_function(function(d){
 	    return 10;
@@ -125,10 +133,10 @@ var go = function(d, keys){
 	    
 	    return place
 		+ numeral(get_grade()).format('0o')
-		+ " grade "
-		+ get_group()
-		// + fmt_group(gaps.val_keys()[0])	    
-		+ " scored an average of  "
+		+ " grade students who were " 
+		+ fmt_group(gaps.val_keys()[0])
+		+ " for free and reduced price lunch " 
+		+ "scored an average of  "
 	    	+ Math.round(d[gaps.val_keys()[0]]) + " points "
 		+ " in "
 		+ get_subj() + "."
@@ -139,10 +147,77 @@ var go = function(d, keys){
 		// + "-grade " + get_subj() + "."
 		// + " That's a " + Math.round(gaps.gap(d)) + "-point gap.";
 
+	})
+	.axis_disabled(true);
+    
+
+    var gaps2 = new gapchart()
+	.container(d3.select("#container2"))
+    // .val_keys(["ell","not ell"])
+	.val_keys( keys )
+	.label_key("state")
+	.display_label_key(function(d){ return d["ap_abbr"]; })
+	.default_val("Connecticut")
+	// .radius(12)
+	.data(d)
+	.unit("% proficient")
+	.gap_unit("")
+	// .title(fmt_group("Connecticut students trail behind Massachusetts"))
+	// .title(fmt_group("Connecticut students trail behind Massachusetts (FRPL " + keys[0] + ")"))    
+	.radius_function(function(d){
+	    return 10;
+	})
+	.explainer_function(function(d){
+
+	    // var place = "In " + d[gaps.label_key()] + ", ";
+	    // if (d[gaps.label_key()] == "Nation")
+	    // 	place = "Nationwide, " ;
+	    
+	    // return place
+	    // 	+ numeral(get_grade()).format('0o')
+	    // 	+ " grade students who were " 
+	    // 	+ fmt_group(gaps.val_keys()[0])
+	    // 	+ " for free and reduced price lunch " 
+	    // 	+ "scored an average of  "
+	    // 	+ Math.round(d[gaps.val_keys()[0]]) + " points "
+	    // 	+ " in "
+	    // 	+ get_subj() + "."
+	    // 	// + fmt_group(gaps.val_keys()[1])
+	    // 	// + " students"
+	    // 	// + " were at or above proficiency in"
+	    // 	// + " " + numeral(get_grade()).format('0o')
+	    // 	// + "-grade " + get_subj() + "."
+	    // 	// + " That's a " + Math.round(gaps.gap(d)) + "-point gap.";
+
 	});
 
-    gaps.draw_rank();
+    // gaps.draw_rank();
+    // gaps2.draw_rank();
 
+    // var unified_scale = [d3.min(gaps.gap_arr().concat(gaps2.gap_arr())),
+    // 		   d3.max(gaps.gap_arr().concat(gaps2.gap_arr()))];
+
+    var unified_scale = [
+	d3.min(gaps.gap_arr().concat(gaps2.gap_arr())),
+	d3.max(gaps.gap_arr().concat(gaps2.gap_arr()))
+    ];
+
+    console.log("unified scale", unified_scale);
+    console.log(gaps.gap_range(), gaps2.gap_range());
+    
+
+    // gaps.val_range = function(){
+    // 	return unified_scale;
+    // }
+    // gaps2.val_range = function(){
+    // 	return unified_scale;
+    // }
+    gaps.force_scale(unified_scale);
+    gaps2.force_scale(unified_scale);
+
+    gaps.draw_rank();
+    gaps2.draw_rank();
+    
     d3.select(window).on("resize", function(){
 	clearTimeout(throttle);
 	throttle = setTimeout(function(){
@@ -159,56 +234,32 @@ var make_gui = function(){
 
     var group = [{
 	"label":"Low-income",
-	"fname":"students from low income families ",
+	"fname":"frpl",
 	"key1":"eligible",
 	"key2":"eligible"
     },{
 	"label":"Not low-income",
-	"fname":"students from non low-income families",
+	"fname":"frpl",
 	"key1":"not eligible",
 	"key2":"not eligible"
     },{
-	"label":"English language learner (ELL)",
-	"fname":"English-language learner students",
-	"key1":"ell",
-	"key2":"ell"
-    },{
-	"label":"Non-ELL",
-	"fname":"non-ELL students",
-	"key1":"not ell",
-	"key2":"not ell"
-    },{
-	"label":"Special education",
-	"fname":"special education sudents",
-	"key1":"sd",
-	"key2":"sd"
-    },{
-	"label":"Not special education",
-	"fname":"non-special educationstudents",
-	"key1":"not sd",
-	"key2":"not sd"
-    },{
 	"label":"White",
-	"fname":"white students",
+	"fname":"white",
 	"key1":"white",
 	"key2":"white"
     },{
 	"label":"Black",
-	"fname":"black students",
+	"fname":"frpl",
 	"key1":"black",
 	"key2":"black"
     },{
 	"label":"Hispanic",
-	"fname":"Hispanic students",
+	"fname":"frpl",
 	"key1":"hispanic",
 	"key2":"hispanic"
-    },{
-	"label":"Asian/Pacific islander",
-	"fname":"Asian-Pacific Islander students",
-	"key1":"asian/pacific islander",
-	"key2":"asian/pacific islander"
-    }];
-
+    }
+    ];
+    
     var subj = [{
 	"label":"Math",
 	"fname":"math",
@@ -228,6 +279,9 @@ var make_gui = function(){
     // add group selection
     var group_sel = ctrls.append("select")
 	.attr("id","group_picker")
+    var group2_sel = ctrls.append("select")
+	.attr("id","group2_picker")
+    
     var grade_sel = ctrls.append("select")
 	.attr("id","grade_picker");
     var subj_sel = ctrls.append("select")
@@ -235,6 +289,15 @@ var make_gui = function(){
     ctrls.append("div").classed("clear-both", true)
 
     var group_opts = group_sel.selectAll("option")
+	.data(group)
+	.enter()
+	.append("option")
+	.attr("data-fname",function(d){ return d["fname"]; })
+	.attr("data-key1",function(d){  return d["key1"]; })
+	.attr("data-key2",function(d){  return d["key2"]; })
+	.text(function(d){ return d["label"];});
+
+    var group2_opts = group2_sel.selectAll("option")
 	.data(group)
 	.enter()
 	.append("option")
@@ -256,7 +319,6 @@ var make_gui = function(){
 	.append("option")
     	.attr("data-fname",function(d){ return d["fname"]; })
 	.text(function(d){ return d["label"];});
-
 
     d3.selectAll("select").on("change", update);
 

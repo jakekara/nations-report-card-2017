@@ -81,14 +81,15 @@ gapchart.prototype.min_max = function( key )
 
 gapchart.prototype.gap = function ( a )
 {
-    if (this.val_keys()[1] = this.val_keys()[0]){
+
+    if (this.val_keys()[1] == this.val_keys()[0]){
 	var ret = a[this.val_keys()[0]];
     }
     else {
 	var ret = a[this.val_keys()[1]] - a[this.val_keys()[0]];
     }
     if (isNaN(ret)) return null;
-    return ret;
+    return Math.abs(ret);
 }
 
 gapchart.prototype.gap_arr = function()
@@ -170,6 +171,7 @@ gapchart.prototype.position_rank_dots = function(f)
 
 gapchart.prototype.draw_rank_dots = function()
 {
+
     var lkey = this.label_key();
     var k1 = this.val_keys()[0];
     var k2 = this.val_keys()[1];
@@ -186,16 +188,22 @@ gapchart.prototype.draw_rank_dots = function()
     // .text(function(d){ return d[lkey]; })
 	.text(display_label)
 	.attr("y", function(){ return this.getBBox().height;});
-
+    
     var that = this;
     var label_bottom = this.__rank_dots
 	.append("text")
 	.classed("dot-label bottom-label", true)
+
+
+    label_bottom
 	.text(function(d){
 	    return "" 
 		+ Math.round(that.gap(d))
 		+ " " + that.gap_unit();
 	})
+
+    
+    label_bottom
     	.attr("y", function(){
 	    return this.getBBox().height
 		+ this.parentNode.getBBox().height + that.radius();
@@ -203,10 +211,13 @@ gapchart.prototype.draw_rank_dots = function()
 
     // label.attr("y", function(){ return this.getBBox().height;});
 
+
+    
     d3.selectAll(".dot-label").attr("x", function(){
 	    var ret = 0 - this.getBBox().width / 2 ;
 	    return ret;
-	});
+    });
+
 
     this.__rank_dots
 	.append("circle")
@@ -222,11 +233,16 @@ gapchart.prototype.draw_rank = function (){
     // filter data
     var that = this;
     // console.log("data", this.data());
+    console.log(this.__val_key);
+    console.log(this.val_keys());
+
     this.data(this.data().filter(function(a){
 	if (a[that.val_keys()[0]].length < 1) return false;
 	if (a[that.val_keys()[1]].length < 1) return false;
 	return true;
     }));
+    
+    console.log(this.val_keys());    
 
     this.container().html("");
 
@@ -251,6 +267,7 @@ gapchart.prototype.draw_rank = function (){
 
     var lkey = this.label_key();
     // console.log("lkey", lkey);
+    console.log(this.val_keys());
     
     this.__gaps_g = this.__g.append("g")
 	.classed("gaps", true)
@@ -266,7 +283,9 @@ gapchart.prototype.draw_rank = function (){
 	      function(d){
 		  return d[lkey];
 	      });
+
     this.draw_rank_dots();
+
 
     this.position_rank_dots(function(d){
 
