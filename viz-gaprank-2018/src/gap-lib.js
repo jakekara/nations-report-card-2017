@@ -22,12 +22,31 @@ var gapchart = function()
 	"bottom":0
     };
 
+    this.explainer_height = this.explainer_height.bind(this);
+    this.title = this.title.bind(this);
+    this.default_val = this.default_val.bind(this);
+    this.explainer_function = this.explainer_function.bind(this);
+    this.unit = this.unit.bind(this);
+    this.gap_unit = this.gap_unit.bind(this);
+    this.radius_function = this.radius_function.bind(this);
+    this.buffer_pct = this.buffer_pct.bind(this);
+    this.container = this.container.bind(this);
+    this.val_keys = this.val_keys.bind(this);
+    this.label_key = this.label_key.bind(this);
+    this.display_label_key = this.display_label_key.bind(this);
+    this.data = this.data.bind(this);
+    
     return this;
 };
 
 // exports.gapchart = gapchart;
 
+gapchart.prototype.show_axis = accessor("__show_axis", true);
+
 gapchart.prototype.explainer_height = accessor ("__explainer_height");
+
+gapchart.prototype.force_min = accessor ("__force_min");
+gapchart.prototype.force_max = accessor ("__force_max");
 
 gapchart.prototype.title = accessor("__title");
 
@@ -81,14 +100,15 @@ gapchart.prototype.min_max = function( key )
 
 gapchart.prototype.gap = function ( a )
 {
-    if (this.val_keys()[1] = this.val_keys()[0]){
+
+    if (this.val_keys()[1] == this.val_keys()[0]){
 	var ret = a[this.val_keys()[0]];
     }
     else {
 	var ret = a[this.val_keys()[1]] - a[this.val_keys()[0]];
     }
     if (isNaN(ret)) return null;
-    return ret;
+    return Math.abs(ret);
 }
 
 gapchart.prototype.gap_arr = function()
@@ -106,6 +126,13 @@ gapchart.prototype.gap_range = function()
     var min = d3.min(this.gap_arr());
     var max = d3.max(this.gap_arr());
 
+    if (typeof(this.force_min()) !== 'undefined'){
+	min = this.force_min();
+    }
+    if (typeof(this.force_max()) !== 'undefined'){
+	max = this.force_max();
+    }
+
     var rng = max - min;
 
     var margin = rng * this.__scale_margin;
@@ -114,7 +141,6 @@ gapchart.prototype.gap_range = function()
     max += margin;
 
     var ret =  [min, max];
-    // console.log(this.gap_arr(), ret);
     return ret
 	    // d3.ax(this.gap_arr()) * (1 + this.__scale_margin)];
 }
@@ -172,27 +198,19 @@ gapchart.prototype.position_rank_dots = function(f)
 	    return "translate(" + xoff + " 0)";
 	});
     
-	// .attr("transform",function(d){
-	//     var bbox = this.getBBox();
-	//     var xoff = f(d);
-	//     return "translate(" + xoff + " 0)";
-	// });
+    
 }
 
 gapchart.prototype.draw_rank_dots = function(xmax)
 {
+
     var lkey = this.label_key();
     var k1 = this.val_keys()[0];
     var k2 = this.val_keys()[1];
 
-    console.log("xmax", xmax);
-    console.log("xmax guess", this.container().node().getBoundingClientRect())
-
-    var xmin = this.__margin.left;
-    var xmax = this.container().node().getBoundingClientRect().width
+    var xmin = this.__margin.left; 
+    var xmax = xmax || this.container().node().getBoundingClientRect().width
 	-  this.__margin.right;
-
-    console.log(xmin, xmax);
 
     var display_label = this.display_label_key()
     
@@ -202,16 +220,22 @@ gapchart.prototype.draw_rank_dots = function(xmax)
     // .text(function(d){ return d[lkey]; })
 	.text(display_label)
 	.attr("y", function(){ return this.getBBox().height;});
-
+    
     var that = this;
     var label_bottom = this.__rank_dots
 	.append("text")
 	.classed("dot-label bottom-label", true)
+
+
+    label_bottom
 	.text(function(d){
 	    return "" 
 		+ Math.round(that.gap(d))
 		+ " " + that.gap_unit();
 	})
+
+    
+    label_bottom
     	.attr("y", function(){
 	    return this.getBBox().height
 		+ this.parentNode.getBBox().height + that.radius();
@@ -219,31 +243,53 @@ gapchart.prototype.draw_rank_dots = function(xmax)
 
     // label.attr("y", function(){ return this.getBBox().height;});
 
+
+    
     d3.selectAll(".dot-label").attr("x", function(){
 	    var ret = 0 - this.getBBox().width / 2 ;
 	    return ret;
-	});
+    });
 
+
+    // this.__rank_dots
+    // 	.append("circle")
+    // 	.attr("r", function(d){
+    // 	    return that.radius();
+    // 	})
+    // 	// .attr("cx", 50)
+    // 	.attr("cy", this.radius()  + label.node().getBBox().height * 1.4)
+
+    // re-doing as triangles
+
+    var w = this.radius() * 2;
     this.__rank_dots
-	.append("circle")
-	.attr("r", function(d){
-	    return that.radius();
-	})
-	// .attr("cx", 50)
-	.attr("cy", this.radius()  + label.node().getBBox().height * 1.4)
+	.append("polygon")
+    	.attr("transform", "translate("
+	      + 0
+	      + ","
+	      + w
+	      + ")")
+    	.attr("y", this.radius()  + label.node().getBBox().height * 1.4)    
+	.attr("points",
+	      ""
+	      + 0 + "," + 0 + " "
+	      + "0, " + (w) + " " 
+	      + w + "," + w);
+    
 }
 
 gapchart.prototype.draw_rank = function (){
 
     // filter data
     var that = this;
-    // console.log("data", this.data());
+
+
     this.data(this.data().filter(function(a){
 	if (a[that.val_keys()[0]].length < 1) return false;
 	if (a[that.val_keys()[1]].length < 1) return false;
 	return true;
     }));
-
+    
     this.container().html("");
 
     this.container().append("h2")
@@ -266,7 +312,6 @@ gapchart.prototype.draw_rank = function (){
     this.__g = this.__svg.append("g");
 
     var lkey = this.label_key();
-    // console.log("lkey", lkey);
     
     this.__gaps_g = this.__g.append("g")
 	.classed("gaps", true)
@@ -274,6 +319,7 @@ gapchart.prototype.draw_rank = function (){
 	       "translate(0 " + this.__margin.top + ")")
 	.style("transform",
 	       "translate(0px," + this.__margin.top + "px)")
+    
 
     this.__rank_dots = this.__gaps_g.selectAll(".rankdot")
 	.data(this.data())
@@ -284,13 +330,12 @@ gapchart.prototype.draw_rank = function (){
 	      function(d){
 		  return d[lkey];
 	      });
+
     this.draw_rank_dots(that.container().node().getBoundingClientRect().width);
-    // this.draw_rank_dots();
 
     this.position_rank_dots(function(d){
 
 	var ret = that.rank_scale()(that.gap(d));
-	// console.log("positioning", d, ret);	
 	return ret;
     });
 
@@ -302,23 +347,23 @@ gapchart.prototype.draw_rank = function (){
 		   - this.__svg.node().getBoundingClientRect().width);
 
     if (overhang > 0){
-	// console.log("too wide- redrawing...");
 	// this.__margin.right += overhang/2;
 	// this.__margin.left += overhang/2;
 	// return this.draw_rank();
     }
-    
-    this.__axis = this.__g.append("g")
-	.classed("d3axis", true)
-	.append("g")
-	.call(this.rank_axis());
-    
-    // console.log(this.__gaps_g.node().getBBox());
 
+    if (this.show_axis()){
+    this.__axis = this.__g.append("g")
+	    .classed("d3axis", true)
+	    .append("g")
+	    .call(this.rank_axis());
+    }
+    
+    
     var trans = "translate(0px, "
-		      + ( this.__gaps_g.node().getBBox().height
-			  + this.__gaps_g.node().getBBox().y
-			  + this.radius())
+	+ ( this.__gaps_g.node().getBBox().height
+	    + this.__gaps_g.node().getBBox().y
+	    + this.radius())
 	+ "px)";
 
     var svg_trans = "translate(0 "
@@ -328,15 +373,10 @@ gapchart.prototype.draw_rank = function (){
 	+ ")";
     
 
-    this.__axis.style("transform", trans).attr("transform", svg_trans);
-    // var svg_trans = "translate(0 "
-    // 		      + ( this.__gaps_g.node().getBBox().height
-    // 			  + this.__gaps_g.node().getBBox().y
-    // 			  + this.radius())
-    // 	+ ")";
-    
-
-    // this.__axis.style("transform", trans).attr("transform", svg_trans);
+    if (this.show_axis()){
+	
+	this.__axis.style("transform", trans).attr("transform", svg_trans);
+    }
     // this.__axis.attr("y",
     // 		     (this.__gaps_g.node().getBBox().height
     // 		     + this.__gaps_g.node().getBBox().y
@@ -387,7 +427,7 @@ gapchart.prototype.draw_rank = function (){
 	    // that.__g.node().innerHeight
 	// + that.__g.node().getBBox().y
 
-	svg_height = Math.max(87, svg_height);
+	svg_height = Math.max(67, svg_height);
 	return svg_height + "px";
     });
     

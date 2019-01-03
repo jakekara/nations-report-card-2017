@@ -166,18 +166,27 @@ gapchart.prototype.position_rank_dots = function(f)
 	    var bbox = this.getBBox();
 	    var xoff = f(d);
 	    return "translate(" + xoff + "px, 0px)";
+	})
+	.attr("transform",function(d){
+	    var bbox = this.getBBox();
+	    var xoff = f(d);
+	    return "translate(" + xoff + " 0)";
 	});
+    
+    
 }
 
-gapchart.prototype.draw_rank_dots = function()
+gapchart.prototype.draw_rank_dots = function(xmax)
 {
 
     var lkey = this.label_key();
     var k1 = this.val_keys()[0];
     var k2 = this.val_keys()[1];
 
-    var xmin = this.__margin.left;
-    var xmax = this.container().node().getBoundingClientRect().width
+    console.log("xmax", xmax);
+    console.log("xmax guess", this.container().node().getBoundingClientRect())
+    var xmin = this.__margin.left; 
+    var xmax = xmax || this.container().node().getBoundingClientRect().width
 	-  this.__margin.right;
 
     var display_label = this.display_label_key()
@@ -233,8 +242,8 @@ gapchart.prototype.draw_rank = function (){
     // filter data
     var that = this;
     // console.log("data", this.data());
-    console.log(this.__val_key);
-    console.log(this.val_keys());
+    // console.log(this.__val_key);
+    // console.log(this.val_keys());
 
     this.data(this.data().filter(function(a){
 	if (a[that.val_keys()[0]].length < 1) return false;
@@ -271,8 +280,11 @@ gapchart.prototype.draw_rank = function (){
     
     this.__gaps_g = this.__g.append("g")
 	.classed("gaps", true)
+	.attr("transform",
+	       "translate(0 " + this.__margin.top + ")")
 	.style("transform",
 	       "translate(0px," + this.__margin.top + "px)")
+    
 
     this.__rank_dots = this.__gaps_g.selectAll(".rankdot")
 	.data(this.data())
@@ -284,8 +296,7 @@ gapchart.prototype.draw_rank = function (){
 		  return d[lkey];
 	      });
 
-    this.draw_rank_dots();
-
+    this.draw_rank_dots(that.container().node().getBoundingClientRect().width);
 
     this.position_rank_dots(function(d){
 
@@ -307,7 +318,7 @@ gapchart.prototype.draw_rank = function (){
 	// this.__margin.left += overhang/2;
 	// return this.draw_rank();
     }
-    
+
     this.__axis = this.__g.append("g")
 	.classed("d3axis", true)
 	.append("g")
@@ -316,12 +327,19 @@ gapchart.prototype.draw_rank = function (){
     // console.log(this.__gaps_g.node().getBBox());
 
     var trans = "translate(0px, "
-		      + ( this.__gaps_g.node().getBBox().height
-			  + this.__gaps_g.node().getBBox().y
-			  + this.radius())
+	+ ( this.__gaps_g.node().getBBox().height
+	    + this.__gaps_g.node().getBBox().y
+	    + this.radius())
 	+ "px)";
 
-    this.__axis.style("transform", trans);
+    var svg_trans = "translate(0 "
+	+ ( this.__gaps_g.node().getBBox().height
+	    + this.__gaps_g.node().getBBox().y
+	    + this.radius())
+	+ ")";
+    
+
+    this.__axis.style("transform", trans).attr("transform", svg_trans);
     // this.__axis.attr("y",
     // 		     (this.__gaps_g.node().getBBox().height
     // 		     + this.__gaps_g.node().getBBox().y
